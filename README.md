@@ -1,1 +1,4 @@
-This file was created by PyCharm 2.7.3 for binding GitHub repository
+Dialogue Analysis
+=================
+
+Bobi Pu, bobi.pu@usc.edu
