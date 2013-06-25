@@ -9,6 +9,7 @@ def loadAllDialoguesFromFile(folderPath):
 	db.dropConference()
 	db.dropSession()
 	db.dropSpeech()
+	ensuredIndex = False
 	for dirPath, dirNames, fileNames in os.walk(folderPath):
 		print(dirPath)
 		if dirPath.split('/')[-1].startswith('chunk'):
@@ -46,6 +47,11 @@ def loadAllDialoguesFromFile(folderPath):
 								text = text.decode('ascii', 'ignore').encode('ascii', 'ignore')
 								speech = {'conference' : conference['_id'], 'session' : session['_id'], 'order' : speechOrder, 'speaker' : speaker, 'text' : text}
 								db.insertSpeech(speech)
+						if not ensuredIndex:
+							db.ensureConferenceIndex()
+							db.ensureSessionIndex()
+							db.ensureSpeechIndex()
+							ensuredIndex = True
 				except Exception as e:
 					print(fileName)
 					print(e)
