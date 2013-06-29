@@ -2,14 +2,25 @@
 Bobi Pu, bobi.pu@usc.edu
 """
 from DBController import DBController
-import os
+import os, csv
 
-def loadAllDialoguesFromFile(folderPath):
+def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
 	db = DBController()
 	db.dropConference()
 	db.dropSession()
 	db.dropSpeech()
 	ensuredIndex = False
+	speakerTypeDict = {}
+	#load the speaker type csv file
+	with open(speakerTypeFilePath, 'rU') as f:
+		lines = csv.reader(f)
+		for i, line in enumerate(lines):
+			if i == 0:
+				continue
+			fileName = line[4].strip()
+			speakerType = line[13].strip()
+			speakerTypeDict[fileName] = speakerType
+
 	for dirPath, dirNames, fileNames in os.walk(folderPath):
 		print(dirPath)
 		if dirPath.split('/')[-1].startswith('chunk'):
@@ -42,10 +53,12 @@ def loadAllDialoguesFromFile(folderPath):
 						speech = db.getSpeechByConferenceIdAndSessionIdAndOrder(conference['_id'], session['_id'], speechOrder)
 						if speech is None:
 							filePath = dirPath + '/' + fileName
+							speakerType = speakerTypeDict[fileName] if fileName in speakerTypeDict else '.'
+
 							with open(filePath, 'r') as f:
 								text = ' '.join(f.readlines()).strip()
 								text = text.decode('ascii', 'ignore').encode('ascii', 'ignore')
-								speech = {'conference' : conference['_id'], 'session' : session['_id'], 'order' : speechOrder, 'speaker' : speaker, 'text' : text}
+								speech = {'conference' : conference['_id'], 'session' : session['_id'], 'order' : speechOrder, 'speaker' : speaker, 'type' : speakerType, 'text' : text}
 								db.insertSpeech(speech)
 						if not ensuredIndex:
 							db.ensureConferenceIndex()
@@ -58,5 +71,5 @@ def loadAllDialoguesFromFile(folderPath):
 
 
 
-if __name__ == '__main__':
-	loadAllDialoguesFromFile('/Users/exsonic/Developer/Marshall_RA/chunk_done/')
+# if __name__ == '__main__':
+# 	loadAllDialoguesFromFile('/Users/exsonic/Developer/DialogueAnalysis/corpus/0.seglist_0503_cleaned.csv', '/Users/exsonic/Developer/Marshall_RA/chunk_done/')

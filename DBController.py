@@ -22,13 +22,13 @@ class DBController(object):
 		self._db.speech.drop()
 
 	def ensureConferenceIndex(self):
-		self._db.conference.ensure_index({'company' : 1, 'time' : 1})
+		self._db.conference.ensure_index([('company' , 1), ('time', 1)])
 
 	def ensureSessionIndex(self):
-		self._db.session.ensure_index({'conference' : 1, 'order' : 1})
+		self._db.session.ensure_index([('conference', 1), ('order', 1)])
 
 	def ensureSpeechIndex(self):
-		self._db.speech.ensure_index({'conference' : 1, 'session' : 1, 'order' : 1})
+		self._db.speech.ensure_index([('conference', 1), ('session', 1), ('order', 1)])
 
 	def insertConference(self, conference):
 		conference['_id'] = str(self._db.conference.count())
