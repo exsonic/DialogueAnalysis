@@ -2,6 +2,7 @@
 Bobi Pu, bobi.pu@usc.edu
 """
 from DBController import DBController
+from Setting import WORD_FILTER
 import os, csv
 
 def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
@@ -33,10 +34,10 @@ def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
 						if fileNameParts[-1].endswith('default') or fileNameParts[-1].endswith('copy'):
 							continue
 						elif fileNameParts[-1][-1].isdigit() and not fileNameParts[-1][-2].isdigit():
-							speaker = fileNameParts[-1][:-1]
+							speaker = fileNameParts[-1][:-1].strip()
 							speechOrder = int(fileNameParts[-1][-1:])
 						elif fileNameParts[-1][-1].isdigit() and fileNameParts[-1][-2].isdigit():
-							speaker = fileNameParts[-1][:-2]
+							speaker = fileNameParts[-1][:-2].strip()
 							speechOrder = int(fileNameParts[-1][-2:])
 						else:
 							continue
@@ -69,7 +70,15 @@ def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
 					print(fileName)
 					print(e)
 
+def loadWordList(wordType):
+	if wordType == WORD_FILTER:
+		with open('word/filterWord.txt', 'r') as f:
+			wordList = [line.lower().strip() for line in f.readlines()]
+	return wordList
 
+def loadWordDict(wordType):
+	wordList = loadWordList(wordType)
+	return dict(zip(wordList, [''] * len(wordList)))
 
 # if __name__ == '__main__':
 # 	loadAllDialoguesFromFile('/Users/exsonic/Developer/DialogueAnalysis/corpus/0.seglist_0503_cleaned.csv', '/Users/exsonic/Developer/Marshall_RA/chunk_done/')

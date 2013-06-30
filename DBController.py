@@ -3,6 +3,7 @@ Bobi Pu, bobi.pu@usc.edu
 """
 
 from pymongo import MongoClient
+from Setting import TYPE_ANALYST
 
 class DBController(object):
 	def __init__(self):
@@ -45,6 +46,22 @@ class DBController(object):
 		self._db.speech.insert(speech)
 		return speech
 
+	def getAllSpeech(self, limit=0):
+		return self._db.speech.find(timeout=False).limit(limit)
+
+	def getAllSpeechByType(self, speechType, limit=0):
+		return self._db.speech.find({'type' : speechType}, timeout=False).limit(limit)
+
+	def getAllAnalystNameList(self):
+		analystNameList = [speech['speaker'] for speech in self.getAllSpeechByType(TYPE_ANALYST)]
+		return list(set(analystNameList))
+
+	def getAllSpeechBySpeaker(self, speaker):
+		return self._db.speech.find({'speaker' : speaker}, timeout=False)
+
+	def getAllSpeechTextListBySpeaker(self, speaker):
+		return [speech['text'] for speech in self.getAllSpeechBySpeaker(speaker)]
+
 	def getConferenceByCompanyTime(self, company, time):
 		return self._db.conference.find_one({'company' : company, 'time' : time})
 
@@ -62,3 +79,11 @@ class DBController(object):
 
 	def getSpeechById(self, speechId):
 		return self._db.speech.find_one({'_id' : speechId})
+
+# if __name__ == '__main__':
+# 	db = DBController()
+# 	analystNameList = db.getAllAnalystNameList()
+# 	analystSpeechDict = dict(zip(analystNameList, [[]] * len(analystNameList)))
+# 	for analystName in analystSpeechDict.iterkeys():
+# 		analystSpeechDict[analystName] = list(db.getAllSpeechBySpeaker(analystName))
+# 	print(analystSpeechDict)
