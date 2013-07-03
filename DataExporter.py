@@ -5,7 +5,6 @@ from DBController import DBController
 from Setting import *
 from SentenceParser import SentenceParser
 from TextUtils import splitListIntoChunk
-from collections import Counter
 
 class CSVWriterThread(Thread):
 	def __init__(self, filePath, attributeList, queue):
@@ -18,17 +17,13 @@ class CSVWriterThread(Thread):
 		with open(self.filePath, 'w') as f:
 			writer = csv.writer(f)
 			writer.writerow(self.attributeList)
-			overallWordList = []
 			while True:
 				lineList = self.queue.get()
 				if lineList is END_OF_QUEUE:
-					overallWordFrequencyList = [wordFrequencyTuple[0] for wordFrequencyTuple in Counter(overallWordList).most_common()][0:50]
-					writer.writerow(overallWordFrequencyList)
 					break
 				print(lineList)
 				writer.writerow(lineList)
 				self.queue.task_done()
-				overallWordList += lineList[1:]
 
 class ProcessThread(Thread):
 	def __init__(self, queue, *args):
@@ -38,57 +33,65 @@ class ProcessThread(Thread):
 		self.args = args
 
 	def topicModelBySpeaker(self):
-		[speakerNameList, topicNum, algorithm, filterMode] = self.args[1:]
+		[speakerNameList, topicNum, algorithm, filterMode, keepScore] = self.args[1:]
 		parser = SentenceParser()
 		for speakerName in speakerNameList:
 			try:
 				sentenceList = self.db.getAllSpeechTextListBySpeaker(speakerName)
-				topicModelWordMatrix = parser.getTopicModelWordMatrix(sentenceList, topicNum, algorithm, filterMode)
+				topicModelWordMatrix = parser.getTopicModelWordMatrix(sentenceList, topicNum, algorithm, filterMode, keepScore)
 				for topicModelWordList in topicModelWordMatrix:
 					topicModelWordList = [speakerName] + topicModelWordList
 					self.queue.put(topicModelWordList)
 			except Exception as e:
 				print(e)
 
+	def topicModelByConference(self):
+		[conferenceList, speakerType, topicNum, algorithm, filterMode, keepScore] = self.args[1:]
+		parser = SentenceParser()
+		for conference in conferenceList:
+			try:
+				sentenceList = self.db.getAllSpeechTextByConferenceIdAndSpeakerType(conference['_id'], speakerType)
+				topicModelWordMatrix = parser.getTopicModelWordMatrix(sentenceList, topicNum, algorithm, filterMode, keepScore)
+				for i, topicModelWordList in enumerate(topicModelWordMatrix):
+					topicModelWordList = [conference['_id'], conference['company'], conference['time'], (i + 1)] + topicModelWordList
+					self.queue.put(topicModelWordList)
+			except Exception as e:
+				print(e)
+
 	def run(self):
 		functionIndex = self.args[0]
-		if functionIndex == FUNC_TOPIC_MODEL_SPEAKER:
+		if functionIndex == FUNC_TOPIC_MODEL_SPEAKER_ANALYST:
 			self.topicModelBySpeaker()
+		elif functionIndex == FUNC_TOPIC_MODEL_CONFERENCE_ANALYST:
+			self.topicModelByConference()
 
 
 class DataExporter(object):
 	def __init__(self):
 		self._db = DBController()
 
-	def exportTopicModel(self, topicNumber=DEFAULT_TOPIC_NUM, algorithm=ALGORITHM_LDA, filterMode=MODE_BASIC):
+	def exportTopicModel(self, exportFileName='export/topicModel.csv',  speakerType=TYPE_ANALYST,
+	                     topicNumber=5, algorithm=ALGORITHM_LDA, filterMode=MODE_BASIC, keepScore=True,):
 		threadPool = []
 		queue = Queue()
-		speakerNameList = self._db.getAllAnalystNameList()
-		attributeList = ['analyst'] + ['topic_word'] * 10
-		chunkList = splitListIntoChunk(speakerNameList, THREAD_POOL_SIZE)
-		for nameList in chunkList:
-			processThread = ProcessThread(queue, FUNC_TOPIC_MODEL_SPEAKER, nameList, topicNumber, algorithm, filterMode)
+		conferenceList = list(self._db.getAllConference())
+		attributeList = ['conferenceId', 'company', 'time', 'topic_number']
+		for i in range(1, 11):
+			attributeList.append('topic_word_' + str(i))
+			attributeList.append('word_score_' + str(i))
+		chunkList = splitListIntoChunk(conferenceList, THREAD_POOL_SIZE)
+		for subConferenceList in chunkList:
+			processThread = ProcessThread(queue, FUNC_TOPIC_MODEL_CONFERENCE_ANALYST, subConferenceList, speakerType, topicNumber, algorithm, filterMode, keepScore)
 			processThread.start()
 			threadPool.append(processThread)
-		writerThread = CSVWriterThread('export/analystTopic.csv', attributeList, queue)
+		writerThread = CSVWriterThread(exportFileName, attributeList, queue)
 		writerThread.start()
 
 		for processThread in threadPool:
 			processThread.join()
 		queue.put(END_OF_QUEUE)
-		#producer finished, all work in queue, then wait queue join(consumer task_done all the job in queue), exit main_process
 		writerThread.join(60)
 
-def appendOverallLine(filePath):
-	with open(filePath, 'rU') as f:
-		lines = list(csv.reader(f))
-	with open(filePath, 'a') as f:
-		writer = csv.writer(f)
-		wordList = []
-		for line in lines:
-			wordList += line
-		newLine = [wordFrequencyTuple[0] for wordFrequencyTuple in Counter(wordList).most_common()][0:50]
-		writer.writerow(newLine)
 
 if __name__ == '__main__':
 	de = DataExporter()

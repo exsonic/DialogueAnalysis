@@ -46,6 +46,9 @@ class DBController(object):
 		self._db.speech.insert(speech)
 		return speech
 
+	def getAllConference(self):
+		return self._db.conference.find(timeout=False)
+
 	def getAllSpeech(self, limit=0):
 		return self._db.speech.find(timeout=False).limit(limit)
 
@@ -61,6 +64,12 @@ class DBController(object):
 
 	def getAllSpeechTextListBySpeaker(self, speaker):
 		return [speech['text'] for speech in self.getAllSpeechBySpeaker(speaker)]
+
+	def getAllSpeechByConferenceIdAndSpeakerType(self, conferenceId, speakerType):
+		return self._db.speech.find({'conference' : conferenceId, 'type' : speakerType}, timeout=False)
+
+	def getAllSpeechTextByConferenceIdAndSpeakerType(self, conferenceId, speakerType):
+		return [speech['text'] for speech in self.getAllSpeechByConferenceIdAndSpeakerType(conferenceId, speakerType)]
 
 	def getConferenceByCompanyTime(self, company, time):
 		return self._db.conference.find_one({'company' : company, 'time' : time})

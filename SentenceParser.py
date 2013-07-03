@@ -10,10 +10,9 @@ class SentenceParser(object):
 		self._db = DBController()
 		self.textProcessor = TextProcessor()
 
-	def getTopicModelWordMatrix(self, sentenceList, topicNumber, topicModelAlgorithm, filterMode):
+	def getTopicModelWordMatrix(self, sentenceList, topicNumber, topicModelAlgorithm, filterMode, keepScore):
 		wordMatrix = []
-		for i, sentence in enumerate(sentenceList):
-			print(i)
+		for sentence in sentenceList:
 			wordMatrix.append(self.textProcessor.getFilteredWordList(sentence, filterMode))
 
 		dictionary = corpora.Dictionary(wordMatrix)
@@ -26,9 +25,12 @@ class SentenceParser(object):
 
 		topicModelWordMatrix = []
 		for i in range(0, model.num_topics):
-			topicWordList = [string.split('*')[-1] for string in model.print_topic(i).split(' + ')]
+			if keepScore:
+				topicWordList = []
+				for string in model.print_topic(i).split(' + '):
+					[score, word] = string.split('*')
+					topicWordList += [word, float(score)]
+			else:
+				topicWordList = [string.split('*')[-1] for string in model.print_topic(i).split(' + ')]
 			topicModelWordMatrix.append(topicWordList)
 		return topicModelWordMatrix
-
-# if __name__ == '__main__':
-# 	sp = SentenceParser()

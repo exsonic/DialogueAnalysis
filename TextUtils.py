@@ -49,7 +49,7 @@ class TextProcessor(object):
 
 def splitListIntoChunk(inputList, chunkNumber):
 	chunkList = []
-	chunkSize = len(inputList) / chunkNumber
+	chunkSize = 1 if (len(inputList) / chunkNumber == 0) else len(inputList) / chunkNumber
 	for i in range(0, len(inputList), chunkSize):
 		chunkList.append(inputList[i : i + chunkSize])
 	return chunkList
