@@ -13,22 +13,14 @@ class DBController(object):
 			print e
 			exit()
 
-	def dropConference(self):
+	def dropDB(self):
 		self._db.conference.drop()
-
-	def dropSession(self):
 		self._db.session.drop()
-
-	def dropSpeech(self):
 		self._db.speech.drop()
 
-	def ensureConferenceIndex(self):
+	def ensureIndex(self):
 		self._db.conference.ensure_index([('company' , 1), ('time', 1)])
-
-	def ensureSessionIndex(self):
 		self._db.session.ensure_index([('conference', 1), ('order', 1)])
-
-	def ensureSpeechIndex(self):
 		self._db.speech.ensure_index([('conference', 1), ('session', 1), ('order', 1)])
 
 	def insertConference(self, conference):
@@ -53,20 +45,20 @@ class DBController(object):
 		return self._db.speech.find(timeout=False).limit(limit)
 
 	def getAllSpeechByType(self, speechType, limit=0):
-		return self._db.speech.find({'type' : speechType}, timeout=False).limit(limit)
+		return self._db.speech.find({'speakerType' : speechType}, timeout=False).limit(limit)
 
 	def getAllAnalystNameList(self):
-		analystNameList = [speech['speaker'] for speech in self.getAllSpeechByType(TYPE_ANALYST)]
+		analystNameList = [speech['speakerName'] for speech in self.getAllSpeechByType(TYPE_ANALYST)]
 		return list(set(analystNameList))
 
-	def getAllSpeechBySpeaker(self, speaker):
-		return self._db.speech.find({'speaker' : speaker}, timeout=False)
+	def getAllSpeechBySpeaker(self, speakerName):
+		return self._db.speech.find({'speakerName' : speakerName}, timeout=False)
 
-	def getAllSpeechTextListBySpeaker(self, speaker):
-		return [speech['text'] for speech in self.getAllSpeechBySpeaker(speaker)]
+	def getAllSpeechTextListBySpeaker(self, speakerName):
+		return [speech['text'] for speech in self.getAllSpeechBySpeaker(speakerName)]
 
 	def getAllSpeechByConferenceIdAndSpeakerType(self, conferenceId, speakerType):
-		return self._db.speech.find({'conference' : conferenceId, 'type' : speakerType}, timeout=False)
+		return self._db.speech.find({'conference' : conferenceId, 'speakerType' : speakerType}, timeout=False)
 
 	def getAllSpeechTextByConferenceIdAndSpeakerType(self, conferenceId, speakerType):
 		return [speech['text'] for speech in self.getAllSpeechByConferenceIdAndSpeakerType(conferenceId, speakerType)]
