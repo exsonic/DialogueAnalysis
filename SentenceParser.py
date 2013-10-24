@@ -2,18 +2,17 @@ from gensim import corpora
 from gensim.models import ldamodel, lsimodel
 from Setting import *
 from DBController import DBController
-from TextUtils import TextProcessor
+from Utils import sentenceToWordList, getWordDict
 
 class SentenceParser(object):
-
 	def __init__(self):
 		self._db = DBController()
-		self.textProcessor = TextProcessor()
 
-	def getTopicModelWordMatrix(self, sentenceList, topicNumber, topicModelAlgorithm, filterMode, keepScore):
+	def getTopicModelWordMatrix(self, sentenceList, topicNumber, topicModelAlgorithm, keepScore):
 		wordMatrix = []
+		filterWordDict = getWordDict(WORD_FILTER)
 		for sentence in sentenceList:
-			wordMatrix.append(self.textProcessor.getFilteredWordList(sentence, filterMode))
+			wordMatrix.append(sentenceToWordList(sentence, filterWordDict))
 
 		dictionary = corpora.Dictionary(wordMatrix)
 		corpus = [dictionary.doc2bow(sentence) for sentence in wordMatrix]

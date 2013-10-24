@@ -1,10 +1,87 @@
-"""
-Bobi Pu, bobi.pu@usc.edu
-"""
+import re
+from nltk import pos_tag, WordNetLemmatizer, word_tokenize
+from nltk.corpus.reader import wordnet
+from Setting import *
 from DBController import DBController
-from Setting import TYPE_ANALYST, TYPE_CEO, TYPE_JOURNALIST, TYPE_DOT, WORD_FILTER
 import os, csv
 
+lemmatizer = WordNetLemmatizer()
+
+
+def getWordListFilePath(wordType):
+	if wordType == WORD_FILTER:
+		return 'word/filterWord.csv'
+	elif wordType == WORD_CAUSE_EX:
+		return 'word/causality_ext.csv'
+	elif wordType == WORD_CAUSE_IN:
+		return 'word/causality_int.csv'
+	elif wordType == WORD_CONTROL_LOW:
+		return 'word/controlability_low.csv'
+	elif wordType == WORD_CONTROL_HIGH:
+		return 'word/controlability_high.csv'
+	elif wordType == WORD_UNCERTAIN:
+		return 'word/LoughranMcDonald_Uncertainty.csv'
+
+def getWordList(wordType):
+	with open(getWordListFilePath(wordType)) as f:
+		return [word.strip().lower() for word in f.readlines()]
+
+
+def getWordDict(wordType):
+	wordList = getWordList(wordType)
+	return dict(zip(wordList, [0] * len(wordList)))
+
+def getWordRegexPattern(wordType):
+	#check the word is unigram or bigram, then use different pattern paradigm
+	wordList = getWordList(wordType)
+	wordPatternStringList = []
+	for wordString in wordList:
+		#patternString = r'\b' + (wordString.split()[0] + r'( [\w\d]+)* ') + wordString.split()[1] + r'\b'
+		wordPatternString = wordString if 1 == len(wordString.split()) else ' '.join(wordString.split())
+		wordPatternString = r'\b' + wordPatternString + r'\b'
+		wordPatternStringList.append(wordPatternString)
+	patternString = r'|'.join(wordPatternStringList)
+	pattern = re.compile(patternString, re.IGNORECASE)
+	return pattern
+
+
+def getMatchWordListFromPattern(text, pattern, filterWordDict):
+	#filter and lemmatize the input text
+	text = ' '.join(sentenceToWordList(text, filterWordDict))
+	return pattern.findall(text)
+
+
+def lemmatize(word):
+	lemmatizedWord = lemmatizer.lemmatize(word, NOUN)
+	if lemmatizedWord != word:
+		return lemmatizedWord
+	lemmatizedWord = lemmatizer.lemmatize(word, VERB)
+	if lemmatizedWord != word:
+		return lemmatizedWord
+	lemmatizedWord = lemmatizer.lemmatize(word, ADJ)
+	if lemmatizedWord != word:
+		return lemmatizedWord
+	return lemmatizer.lemmatize(word, ADV)
+
+
+def sentenceToWordList(sentence, filterWordDict=None):
+	#use this to extract keyword
+	if filterWordDict is not None:
+		wordList = [lemmatize(word.lower().strip()) for word in sentence.split() if unicode.isalnum(word)]
+		return [word for word in wordList if word not in filterWordDict]
+	else:
+		return [lemmatize(word.lower().strip()) for word in sentence.split() if unicode.isalnum(word)]
+
+
+def splitListIntoChunk(inputList, chunkNumber):
+	chunkList = []
+	chunkSize = 1 if (len(inputList) / chunkNumber == 0) else len(inputList) / chunkNumber
+	for i in range(0, len(inputList), chunkSize):
+		chunkList.append(inputList[i : i + chunkSize])
+	return chunkList
+
+
+#FILE load
 def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
 	db = DBController()
 	db.dropDB()
@@ -85,16 +162,3 @@ def loadAllDialoguesFromFile(speakerTypeFilePath, folderPath):
 				except Exception as e:
 					print(fileName)
 					print(e)
-
-def loadWordList(wordType):
-	if wordType == WORD_FILTER:
-		with open('word/filterWord.txt', 'r') as f:
-			wordList = [line.lower().strip() for line in f.readlines()]
-	return wordList
-
-def loadWordDict(wordType):
-	wordList = loadWordList(wordType)
-	return dict(zip(wordList, [''] * len(wordList)))
-
-if __name__ == '__main__':
-	loadAllDialoguesFromFile('/Users/exsonic/Developer/DialogueAnalysis/corpus/0.seglist_0701_cleaned.csv', '/Users/exsonic/Developer/Marshall_RA/chunk_done/')
